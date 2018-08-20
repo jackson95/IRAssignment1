@@ -14,6 +14,7 @@ import java.io.*;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
+import java.lang.*;
 
 public class TextProcessing {
 
@@ -31,45 +32,66 @@ public class TextProcessing {
 
     public static void main(String[] args) throws IOException {
 
-        // File streams to read from a file
+        // File streams to read from a folder
 
-        File file = new File(System.getProperty("user.dir") + "/dataset/cranfieldDocs/cranfield0001");
-        Scanner input = new Scanner(file);
+        File folder = new File(System.getProperty("user.dir") + "/tokens/withstoppingwords");
+        for (final File fileEntry : folder.listFiles()) {
+            System.out.println(fileEntry.getName() + " started to process file.");
 
-        // Streams to write on different files
 
-        PrintWriter tokenFile = new PrintWriter("tokens/withstoppingwords/cranfield0001", "UTF-8");
-        PrintWriter task1Stat = new PrintWriter("tasks/task1.txt","UTF-8");
+            File file = new File(System.getProperty("user.dir") + "/dataset/cranfieldDocs/" + fileEntry.getName());
+            Scanner input = new Scanner(file);
 
-        int wordCount = 0;
-        while (input.hasNext()) {
-            String word  = input.next();
-            if(!isTag(word)) {
-                word = tokenize(word);
-                tokenFile.println(word);
-                wordCount = wordCount + 1;
-                addVocabularyWord(word);
+            // Streams to write on token files
+
+            PrintWriter tokenFile = new PrintWriter("tokens/withstoppingwords/" + fileEntry.getName(), "UTF-8");
+
+            int wordCount = 0;
+            while (input.hasNext()) {
+                String word = input.next();
+                if (!isTag(word)) {
+                    word = tokenize(word);
+                    if(word.trim().length() > 0) {
+                        tokenFile.println(word.trim());
+                        wordCount = wordCount + 1;
+                        addVocabularyWord(word.trim());
+                    }
+                }
             }
+            tokenFile.print("Word count: " + wordCount);
+            tokenFile.close();
+            collectionWordCount = collectionWordCount + wordCount;
+
+            // Sort the Vocabulary based on frequency of the word in descending order.
+
+            Collections.sort(vocabulary, new Comparator<VocabularyWord>() {
+                public int compare(VocabularyWord w1, VocabularyWord w2) {
+                    return Integer.valueOf(w2.frequency).compareTo(w1.frequency);
+                }
+            });
+
+            System.out.println("Finisheed processing file: " + fileEntry.getName());
+
         }
-        tokenFile.print("Word count: " + wordCount);
-        tokenFile.close();
-        collectionWordCount = collectionWordCount + wordCount;
-        task1Stat.println("Total number of words in the collection: " + collectionWordCount);
-        task1Stat.println("Vocabulary Size: " + vocabulary.size());
-
-        // Sort the Vocabulary based on frequency of the word in descending order.
-
-        Collections.sort(vocabulary, new Comparator<VocabularyWord>() {
-            public int compare(VocabularyWord w1, VocabularyWord w2)
-            {
-                return Integer.valueOf(w2.frequency).compareTo(w1.frequency);
-            }
-        });
 
         // Print the top 50 words of the vocabulary in the text file
 
+        PrintWriter task1Stat = new PrintWriter("tasks/task1.txt","UTF-8");
+        task1Stat.println("Total number of words in the collection: " + collectionWordCount);
+        task1Stat.println("Vocabulary Size: " + vocabulary.size());
+
+        // allocate rank to the top 50 words in the vocabulary and write them on the file
+
         task1Stat.println("Word" + "\t" + "Frequency" + "\t" + "Rank");
         for (int i=0; i<50 && i<vocabulary.size() ; i++) {
+
+            // updates the rank of the words in the vocabulary
+            VocabularyWord updateVocab = new VocabularyWord();
+            updateVocab = vocabulary.get(i);
+            updateVocab.updaterank(i+1);
+            vocabulary.set(i,updateVocab);
+
+            // Write the vocabulary in the file
             task1Stat.println(vocabulary.get(i).word + "\t" + vocabulary.get(i).frequency + "\t" + vocabulary.get(i).rank);
         }
         task1Stat.close();
@@ -139,29 +161,65 @@ public class TextProcessing {
      */
     private static void removeStopWords(ArrayList<VocabularyWord> refinedVocabulary) throws IOException {
 
-        PrintWriter task2Stat = new PrintWriter("tasks/task2.txt","UTF-8");
-        PrintWriter tokenFile = new PrintWriter("tokens/withoutstoppingwords/cranfield0001", "UTF-8");
 
-        for (int i=0; i<refinedVocabulary.size(); i++) {
-            if(checkIsStopWord(refinedVocabulary.get(i).word))
-            {
-                System.out.println(refinedVocabulary.get(i).word + " is a stop word");
-                refinedVocabulary.remove(i);
+        // File streams to read from a folder
+
+        File folder = new File(System.getProperty("user.dir") + "/tokens/withstoppingwords");
+        for (final File fileEntry : folder.listFiles()) {
+            System.out.println(fileEntry.getName() + " started to process file.");
+
+
+            File file = new File(System.getProperty("user.dir") + "/tokens/withstoppingwords/" + fileEntry.getName());
+            Scanner input = new Scanner(file);
+
+            // Streams to write on different files
+
+            PrintWriter tokenFile = new PrintWriter("tokens/withoutstoppingwords/" + fileEntry.getName(), "UTF-8");
+
+            int wordCount = 0;
+            while (input.hasNext()) {
+                String word = input.next();
+                if ((word.trim().length() > 0) && !checkIsStopWord(word.trim())) {
+                    tokenFile.println(word.trim());
+                    wordCount = wordCount + 1;
+                }
             }
+            tokenFile.print("Word count: " + wordCount);
+            tokenFile.close();
+        }
+
+
+        PrintWriter task2Stat = new PrintWriter("tasks/task2.txt","UTF-8");
+        //PrintWriter tokenFile = new PrintWriter("tokens/withoutstoppingwords/cranfield0001", "UTF-8");
+
+        int j=0;
+        while(j<refinedVocabulary.size()) {
+            if(checkIsStopWord(refinedVocabulary.get(j).word))
+                refinedVocabulary.remove(j);
+            else
+                j++;
         }
 
         task2Stat.println("Total number of words in the collection: " + collectionWordCount);
         task2Stat.println("Vocabulary Size: " + refinedVocabulary.size());
 
-        // Print the top 50 words of the vocabulary in the text file
+        // allocate rank to the top 50 words in the vocabulary and write them on the file
 
         task2Stat.println("Word" + "\t" + "Frequency" + "\t" + "Rank");
         for (int i=0; i<50 && i<refinedVocabulary.size() ; i++) {
+
+            // updates the rank of the words in the vocabulary
+            VocabularyWord updateVocab = new VocabularyWord();
+            updateVocab = vocabulary.get(i);
+            updateVocab.updaterank(i+1);
+            vocabulary.set(i,updateVocab);
+
+            // Write the vocabulary in the file
             task2Stat.println(refinedVocabulary.get(i).word + "\t" + refinedVocabulary.get(i).frequency + "\t" + refinedVocabulary.get(i).rank);
-            tokenFile.println(refinedVocabulary.get(i).word);
+            //tokenFile.println(refinedVocabulary.get(i).word);
         }
         task2Stat.close();
-        tokenFile.close();
+        //tokenFile.close();
     }
 
     /*
@@ -223,5 +281,14 @@ class VocabularyWord {
      */
     public void updatefrequency() {
         frequency = frequency+1;
+    }
+
+    /*
+     * Function used to update the rank of a word in the dictionary
+     * @param i int
+     * @return NULL
+     */
+    public void updaterank(int i) {
+        rank = i;
     }
 }
