@@ -19,22 +19,32 @@ import java.lang.*;
 public class TextProcessing {
 
     //Regular expression for SGML Tags
-
     private static final String HTML_PATTERN = "<(\"[^\"]*\"|'[^']*'|[^'\">])*>";
 
     // Used to count the total number of words in the collection
-
     private static int collectionWordCount = 0;
 
     // Array list for vocabulary
-
     private static ArrayList<VocabularyWord> vocabulary = new ArrayList<VocabularyWord>();
 
+    /*
+     * The function is used to tokenise the words in the cranfieldDocs dataset and also to provide the statistics related to these tokens created.
+     * The function achieves the above mentioned goal by following these steps:
+     *  1.  Scan each file from the cranfieldDocs data set one by one.
+     *  2.  Read the files word by word and check wether the word is a SGML Tag. If the word is a tag then move to next word
+     *  3.  If word is not a tag then tokenize the word by replacing special characters with space and changing characters in capital letters to small letters.
+     *  4.  After tokenizing write the token in a file under the "tokens/withstoppingwords" with the same name as from the file it was fetch.
+     *  5.  Add the word to vocabulary if the word is not in vocabulary else increase the frequency corresponding to the word by 1.
+     *  6.  Print the statistics of top 50 words in vocabulary along with the answers to the other questions asked in the task to "tasks/task1.txt".
+     *  7.  Call the function to remove stop words.
+     *
+     * @return NULL
+     */
     public static void main(String[] args) throws IOException {
 
         // File streams to read from a folder
 
-        File folder = new File(System.getProperty("user.dir") + "/tokens/withstoppingwords");
+        File folder = new File(System.getProperty("user.dir") + "/dataset/cranfieldDocs/");
         for (final File fileEntry : folder.listFiles()) {
             System.out.println(fileEntry.getName() + " started to process file.");
 
@@ -52,13 +62,15 @@ public class TextProcessing {
                 if (!isTag(word)) {
                     word = tokenize(word);
                     if(word.trim().length() > 0) {
-                        tokenFile.println(word.trim());
+                        String arr[] = word.split(" ", 2);
+                        String firstword = arr[0].trim();
+                        tokenFile.println(firstword);
                         wordCount = wordCount + 1;
-                        addVocabularyWord(word.trim());
+                        addVocabularyWord(firstword);
                     }
                 }
             }
-            tokenFile.print("Word count: " + wordCount);
+            //tokenFile.print("Word count: " + wordCount);
             tokenFile.close();
             collectionWordCount = collectionWordCount + wordCount;
 
@@ -101,7 +113,7 @@ public class TextProcessing {
         ArrayList<VocabularyWord> refinedVocabulary = new ArrayList<VocabularyWord>();
         refinedVocabulary = vocabulary;
         removeStopWords(refinedVocabulary);
-
+        System.out.println("Tokens created sucessfully");
 
     }
 
@@ -156,6 +168,13 @@ public class TextProcessing {
 
     /*
      * The function removes the stopwords from the vocabulary. The stopwords are taken from the common_words.txt file provided
+     * The function achieves the above mentioned goal by following these steps:
+     *  1.  Scan each file from the folder "token/withstoppingwords" which contains all the token created from the cranfield dataset.
+     *  2.  Read each file word by word and check if the token is a stopping word which is provided in the common_words.txt file.
+     *  3.  If the token is a stopping word remove the word from the refinedVocabulary arraylist.
+     *  4.  Else if the token is not a stopping word print the token in a file inside "token/withoutstoppingwords" folder with same filename as from which it was fetch from.
+     *  5.  Print the statistics of top 50 words in vocabulary along with the answers to the other questions asked in the task to "tasks/task2.txt".
+     *
      * @param refinedVocabulary ArrayList
      * @return NULL
      */
@@ -184,7 +203,7 @@ public class TextProcessing {
                     wordCount = wordCount + 1;
                 }
             }
-            tokenFile.print("Word count: " + wordCount);
+            //tokenFile.print("Word count: " + wordCount);
             tokenFile.close();
         }
 
